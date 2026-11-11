@@ -98,3 +98,22 @@ Running log of choices that deviate from, or fill gaps in, the original spec.
   300 samples so it reflects the last ~5 minutes rather than the engine's warm-up history.
 - **Measured (local, replay at 60×):** newest contributing post → WebSocket send: median 0.18 s,
   max 0.36 s.
+
+## Phase 5
+- **Socket logic is a plain TS class** (`ReconnectingSocket`) with injectable timers/fetch/socket
+  factory, wrapped by thin React hooks. That makes the reconnect schedule (0.5 → 1 → 2 → 4 → 8 → 10 s
+  cap, reset on open) and polling fallback (`GET /api/trends` every 2 s only while disconnected)
+  unit-testable with fake timers.
+- **Rank animation** uses absolutely positioned rows keyed by topic with a CSS `top` transition, so
+  React reuses DOM nodes and moves animate without an animation library.
+- **Category filter is client-side**: the grid needs all 15 categories anyway, and switching filters is
+  instant without reconnecting the socket (the server-side `?category=` filter is still available).
+- **Header "Posts/s"** is pipeline throughput (enriched posts/s from `/api/metrics`); **Freshness** is
+  computed client-side as `now − max_source_ingested_at` per the spec; **Ingest p95** is the worker's
+  Kafka-produce → enriched latency.
+- **Metrics fixes found while testing the UI:** histograms are now a 60 s rolling window (a past backlog
+  had pinned p95 at minutes), and `/api/metrics` ignores per-instance snapshots older than 15 s (dead
+  worker PIDs lingered in the Redis hash because live instances kept refreshing the key TTL); services
+  also delete their own field on shutdown.
+- **Topic display:** proper nouns keep their surface form ("united nations", not "united nation").
+- Recharts is split into its own chunk (~155 kB gzip); `chunkSizeWarningLimit` raised to 600 kB.

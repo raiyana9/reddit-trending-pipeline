@@ -42,6 +42,7 @@ from shared.metrics import Metrics
 from shared.schemas import EnrichedPost, TrendUpdate
 
 HEARTBEAT_S = 15.0
+STALE_METRICS_S = 15.0  # ignore instance snapshots older than this (crashed / stopped services)
 POST_FIELDS = ("id", "subreddit", "title", "url", "category", "sentiment", "sentiment_label",
                "topics", "ingested_at", "processed_at")
 log = get_logger("api")
@@ -239,8 +240,11 @@ def create_app(settings: Settings | None = None, redis_client: Any = None,
         for key in keys:
             name = (key.decode() if isinstance(key, bytes) else key)[len(REDIS_METRICS_PREFIX):]
             raw = await s.redis.hgetall(key)
-            services[name] = sorted((json.loads(v) for v in raw.values()),
-                                    key=lambda m: m["instance"])
+            now = time.time()
+            fresh = [m for m in (json.loads(v) for v in raw.values())
+                     if now - m.get("ts", 0) <= STALE_METRICS_S]
+            if fresh:
+                services[name] = sorted(fresh, key=lambda m: m["instance"])
         return {"generated_at": time.time(),
                 "summary": summarize_metrics(services, s.latest or await s.snapshot(), time.time()),
                 "services": services}

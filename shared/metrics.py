@@ -20,6 +20,7 @@ from typing import Any
 from shared.config import REDIS_METRICS_PREFIX
 
 HIST_SIZE = 5_000
+HIST_WINDOW_S = 60.0  # histograms report the last minute, so a past backlog doesn't mask current latency
 
 
 def percentile(values: list[float], p: float) -> float:
@@ -32,13 +33,15 @@ def percentile(values: list[float], p: float) -> float:
 
 
 class Metrics:
-    def __init__(self, service: str, instance: str | None = None, hist_size: int = HIST_SIZE) -> None:
+    def __init__(self, service: str, instance: str | None = None, hist_size: int = HIST_SIZE,
+                 hist_window_s: float = HIST_WINDOW_S) -> None:
         self.service = service
         self.instance = instance or f"{socket.gethostname()}-{os.getpid()}"
         self.started_at = time.time()
         self.counters: dict[str, float] = defaultdict(float)
         self.gauges: dict[str, float] = {}
-        self.hists: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=hist_size))
+        self.hist_window_s = hist_window_s
+        self.hists: dict[str, deque[tuple[float, float]]] = defaultdict(lambda: deque(maxlen=hist_size))
         self._prev_counters: dict[str, float] = {}
         self._prev_t = time.time()
 
@@ -50,7 +53,11 @@ class Metrics:
         self.gauges[name] = value
 
     def observe(self, name: str, value: float) -> None:
-        self.hists[name].append(value)
+        self.hists[name].append((time.time(), value))
+
+    def recent(self, name: str, now: float | None = None) -> list[float]:
+        cutoff = (now or time.time()) - self.hist_window_s
+        return [v for t, v in self.hists.get(name, ()) if t >= cutoff]
 
     # -- reporting ---------------------------------------------------------
     def snapshot(self) -> dict[str, Any]:
@@ -62,8 +69,8 @@ class Metrics:
         self._prev_counters = dict(self.counters)
         self._prev_t = now
         hists = {}
-        for name, values in self.hists.items():
-            vals = list(values)
+        for name in list(self.hists):
+            vals = self.recent(name, now)
             hists[name] = {
                 "n": len(vals),
                 "p50": percentile(vals, 50),
@@ -97,7 +104,7 @@ class Metrics:
                 await asyncio.wait_for(stop.wait(), timeout=interval_s)
             except TimeoutError:
                 pass
-        try:
-            await self.publish(redis)
+        try:  # remove our field so dead instances don't linger in the aggregate
+            await redis.hdel(f"{REDIS_METRICS_PREFIX}{self.service}", self.instance)
         except Exception:
             pass

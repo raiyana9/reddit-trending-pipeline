@@ -31,7 +31,8 @@ EDGE_POS = {"DET", "PRON", "PUNCT", "CCONJ", "ADP", "PART", "SCONJ", "AUX", "SYM
 _NUMERIC = re.compile(r"^[\d\s.,:%$#+\-/]+$")
 MAX_PHRASE_TOKENS = 5
 # spaCy's lemmatizer produces some lemmas no Reddit user would write.
-LEMMA_OVERRIDES = {"datum": "data", "medium": "media", "news": "news", "series": "series"}
+LEMMA_OVERRIDES = {"datum": "data", "medium": "media", "news": "news", "series": "series",
+                   "earning": "earnings"}
 _REDDIT_REF = re.compile(r"(^|\W)/?[ru]\s*/\s*\w+", re.IGNORECASE)
 
 
@@ -51,6 +52,8 @@ def _trim(span: Span) -> Span | None:
 
 
 def _lemma(tok: Token) -> str:
+    if tok.pos_ == "PROPN":  # names keep their surface form: "United Nations", not "united nation"
+        return tok.lower_
     lemma = tok.lemma_.lower()
     return LEMMA_OVERRIDES.get(lemma, lemma)
 

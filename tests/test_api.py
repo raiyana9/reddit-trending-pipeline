@@ -93,6 +93,19 @@ def test_metrics_aggregates_services(client, redis):
     assert s["nlp_workers"] == 1 and s["ingest_latency_ms"]["p95"] == 300.0
 
 
+def test_metrics_ignores_stale_instances(client, redis):
+    live = Metrics("nlp_worker", instance="live")
+    live.observe("ingest_latency_s", 0.1)
+    dead = {"service": "nlp_worker", "instance": "dead", "ts": time.time() - 120, "uptime_s": 1,
+            "counters": {}, "rates_per_s": {}, "gauges": {},
+            "histograms": {"ingest_latency_s": {"n": 1, "p50": 300, "p95": 300, "p99": 300, "max": 300}}}
+    client.portal.call(live.publish, redis)
+    client.portal.call(redis.hset, "metrics:nlp_worker", "dead", json.dumps(dead))
+    body = client.get("/api/metrics").json()
+    assert [i["instance"] for i in body["services"]["nlp_worker"]] == ["live"]
+    assert body["summary"]["ingest_latency_ms"]["p95"] == 100.0
+
+
 def test_summarize_metrics_handles_empty():
     s = summarize_metrics({}, None, time.time())
     assert s["enriched_per_s"] == 0 and s["freshness_s"] is None

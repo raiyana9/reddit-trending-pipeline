@@ -84,3 +84,18 @@ websocat ws://localhost:8000/ws/trends              # snapshot, then 1 update/s
 | `WS /ws/posts` | Stream of newly enriched posts (ticker) |
 
 Frames: `{"type", "server_sent_at", "data"}`; `{"type": "ping"}` after 15 s of silence.
+
+## Dashboard (Phase 5)
+
+```bash
+cd frontend && npm install
+npm run dev        # http://localhost:5173 (expects the API on :8000)
+npm test -- --run  # Vitest: reconnect hook, trend diffing, components
+npm run build      # type-check + production build
+```
+
+Header (connection dot, posts/s, freshness, ingest p95), top-20 trending list with animated rank
+changes, sparklines, sentiment chips and category tags; 15-tile category grid (click to filter);
+topic drawer with count/sentiment history and sample posts; live post ticker (`/ws/posts`).
+WebSocket auto-reconnects (exponential backoff, max 10 s) and polls `/api/trends` while disconnected.
+Dark mode follows the OS and can be toggled.
