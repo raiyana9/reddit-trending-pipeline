@@ -27,3 +27,17 @@ Topics (24h retention): `reddit.raw` (6 partitions), `reddit.enriched` (6), `tre
 
 All configuration is via environment variables — see [.env.example](.env.example).
 Design deviations are logged in [DECISIONS.md](DECISIONS.md).
+
+## Producers (Phase 1)
+
+```bash
+uv run python -m services.producer replay --speed 10          # data/*.jsonl at 10x
+uv run python -m services.producer replay --rate 50 --loop     # fixed rate, forever
+uv run python -m services.producer synthetic --rate 20 --duration 2m \
+    --inject-trend "quantum toaster" --at 30s --inject-rate 20/s
+uv run python -m services.producer reddit                      # live; needs REDDIT_* in .env
+uv run python scripts/record_sample.py --source reddit -n 500  # capture live posts to JSONL
+```
+
+Every message is keyed by post id and stamped with `ingested_at` immediately before send.
+Authors are SHA-256 hashed. The live producer dedups through Redis (`seen:<id>`, 48h TTL).
