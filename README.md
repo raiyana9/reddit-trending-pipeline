@@ -41,3 +41,16 @@ uv run python scripts/record_sample.py --source reddit -n 500  # capture live po
 
 Every message is keyed by post id and stamped with `ingested_at` immediately before send.
 Authors are SHA-256 hashed. The live producer dedups through Redis (`seen:<id>`, 48h TTL).
+
+## NLP worker (Phase 2)
+
+```bash
+uv run python -m services.nlp_worker                 # consumer group "nlp-workers"
+docker compose --profile app up -d --scale nlp_worker=3
+```
+
+spaCy `en_core_web_sm` (+ custom `vader_sentiment` component) extracts up to 8 normalized
+keyphrases, filtered entities, a category (15-way: subreddit prior + lemma-aware `PhraseMatcher`
+keywords + entity hints, softmax confidence) and a VADER compound sentiment. Micro-batches flush at
+`NLP_BATCH_SIZE` messages or `NLP_FLUSH_MS` ms; offsets commit after the enriched batch is acked.
+Failures go to `reddit.dlq`. Swap models with `SPACY_MODEL=en_core_web_md`.
