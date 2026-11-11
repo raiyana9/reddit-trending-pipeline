@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Data (only the committed sample is tracked)
+data/*.jsonl
+!data/sample_posts.jsonl
+
+# Local-only build notes
+CLAUDE.md
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,114 @@
+# Fixed taxonomy: exactly 15 categories.
+# - subreddits: seed subreddits; each gives a strong prior toward this category
+# - keywords:   phrases matched (case-insensitive, lemma-aware) with spaCy PhraseMatcher
+# - entity_hints: spaCy entity labels that weakly suggest this category
+#
+# Classifier weights live in services/nlp_worker/category.py.
+
+categories:
+  - name: Technology
+    subreddits: [technology, gadgets, programming, apple, android]
+    keywords: [smartphone, laptop, software, app, iphone, android, linux, windows, chip, processor,
+               browser, open source, developer, cybersecurity, data breach, update, battery, startup app,
+               cloud, api, github, framework, tablet, headphones, wifi, router, privacy, encryption,
+               operating system, keyboard, monitor, gpu, cpu, smartwatch]
+    entity_hints: [PRODUCT, ORG]
+
+  - name: AI/ML
+    subreddits: [MachineLearning, artificial, OpenAI, LocalLLaMA]
+    keywords: [ai, artificial intelligence, machine learning, llm, large language model, neural network,
+               chatgpt, gpt, model weights, training, transformer, deep learning, openai, anthropic,
+               claude, gemini, agi, dataset, inference, fine-tuning, chatbot, prompt, benchmark,
+               diffusion, image generator, ai agent, reinforcement learning, embedding]
+    entity_hints: [ORG, PRODUCT]
+
+  - name: Gaming
+    subreddits: [gaming, Games, pcgaming, PS5, NintendoSwitch]
+    keywords: [video game, gameplay, console, playstation, xbox, nintendo, steam, rpg, multiplayer, dlc,
+               patch notes, boss fight, speedrun, fps, open world, game studio, early access, gamer,
+               controller, zelda, mario, pokemon, elden ring, save file, quest, raid, esports]
+    entity_hints: [PRODUCT, WORK_OF_ART]
+
+  - name: Sports
+    subreddits: [sports, nba, soccer, nfl, formula1]
+    keywords: [playoff, championship, season, coach, team, goal, match, league, player, trade, draft,
+               tournament, world cup, transfer, quarterback, striker, referee, injury, mvp, super bowl,
+               grand prix, race, final score, overtime, stadium, olympics, touchdown, penalty]
+    entity_hints: [PERSON, ORG]
+
+  - name: Politics
+    subreddits: [politics, PoliticalDiscussion, Conservative, neutralnews]
+    keywords: [election, senate, congress, president, democrat, republican, vote, bill, campaign,
+               policy, governor, supreme court, legislation, poll, white house, lawmaker, impeachment,
+               primary, ballot, partisan, filibuster, administration, executive order, voter]
+    entity_hints: [NORP, PERSON, GPE]
+
+  - name: World News
+    subreddits: [worldnews, news, geopolitics, europe]
+    keywords: [war, ceasefire, united nations, sanctions, protest, earthquake, refugee, minister,
+               border, military, government, prime minister, troops, summit, treaty, embassy, missile,
+               flood, hurricane, humanitarian, invasion, diplomat, coup, nato]
+    entity_hints: [GPE, NORP, LOC]
+
+  - name: Finance/Crypto
+    subreddits: [wallstreetbets, stocks, investing, CryptoCurrency, Bitcoin, personalfinance]
+    keywords: [stock, market, bitcoin, crypto, ethereum, earnings, inflation, interest rate, fed,
+               portfolio, etf, dividend, bull market, bear market, shares, options, calls, puts,
+               mortgage, retirement, 401k, savings, credit card, debt, index fund, recession, nasdaq,
+               s&p 500, token, blockchain, wallet, short squeeze]
+    entity_hints: [MONEY, PERCENT, ORG]
+
+  - name: Science
+    subreddits: [science, space, Physics, askscience]
+    keywords: [study, research, scientist, nasa, telescope, physics, quantum, species, climate change,
+               discovery, experiment, planet, mars, fossil, galaxy, black hole, asteroid, rocket launch,
+               spacex, dna, gene, evolution, particle, peer review, astronomer, moon, orbit]
+    entity_hints: [ORG, LOC]
+
+  - name: Health
+    subreddits: [Health, medicine, Fitness, nutrition, loseit]
+    keywords: [vaccine, doctor, patient, disease, cancer, diet, workout, mental health, sleep, hospital,
+               symptom, fda, protein, weight loss, calorie, gym, therapy, anxiety, depression, virus,
+               outbreak, medication, surgery, blood pressure, nurse, exercise, cardio]
+    entity_hints: [ORG]
+
+  - name: Entertainment
+    subreddits: [movies, television, netflix, marvelstudios, boxoffice]
+    keywords: [movie, film, trailer, tv show, series, season finale, actor, actress, director, netflix,
+               episode, box office, sequel, streaming, oscar, emmy, hbo, disney, marvel, cast, premiere,
+               reboot, showrunner, screenplay, cinema, documentary, spoiler]
+    entity_hints: [WORK_OF_ART, PERSON]
+
+  - name: Music
+    subreddits: [Music, hiphopheads, indieheads, popheads]
+    keywords: [album, song, single, tour, concert, rapper, band, singer, spotify, lyrics, music video,
+               grammy, guitar, festival, setlist, vinyl, mixtape, ep, track, producer, chorus, drummer,
+               billboard, playlist, record label, live performance]
+    entity_hints: [WORK_OF_ART, PERSON]
+
+  - name: Business/Startups
+    subreddits: [business, startups, Entrepreneur, smallbusiness]
+    keywords: [startup, founder, ceo, funding, venture capital, acquisition, layoffs, revenue, ipo,
+               company, saas, customer, merger, seed round, series a, valuation, profit, small business,
+               marketing, pricing, b2b, cofounder, bankruptcy, quarterly results, supply chain, retail]
+    entity_hints: [ORG, MONEY]
+
+  - name: Education/Careers
+    subreddits: [careerguidance, cscareerquestions, college, GradSchool, jobs]
+    keywords: [job, interview, resume, salary, career, college, university, degree, student, internship,
+               hiring, job offer, professor, exam, phd, thesis, manager, promotion, remote work,
+               recruiter, linkedin, tuition, scholarship, graduate, coworker, boss, raise, layoff notice]
+    entity_hints: [ORG]
+
+  - name: Lifestyle
+    subreddits: [LifeProTips, food, travel, DIY, malefashionadvice]
+    keywords: [recipe, cooking, travel, home, apartment, fashion, outfit, garden, coffee, wedding,
+               relationship, vacation, decor, baking, restaurant, flight, hotel, furniture, renovation,
+               skincare, budget trip, meal prep, cleaning, pet, dog, cat, hobby]
+    entity_hints: [GPE, LOC]
+
+  - name: Memes/Humor
+    subreddits: [memes, funny, dankmemes, me_irl, ProgrammerHumor]
+    keywords: [meme, lol, funny, joke, me irl, relatable, humor, shitpost, nobody, literally me,
+               when you, starter pack, cursed, wholesome, mood, pov, lmao, bruh, vibe check, unexpected]
+    entity_hints: []
