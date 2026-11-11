@@ -54,3 +54,14 @@ keyphrases, filtered entities, a category (15-way: subreddit prior + lemma-aware
 keywords + entity hints, softmax confidence) and a VADER compound sentiment. Micro-batches flush at
 `NLP_BATCH_SIZE` messages or `NLP_FLUSH_MS` ms; offsets commit after the enriched batch is acked.
 Failures go to `reddit.dlq`. Swap models with `SPACY_MODEL=en_core_web_md`.
+
+## Trend engine (Phase 3)
+
+```bash
+uv run python -m services.trend_engine
+```
+
+10 s buckets per topic; 5-min window vs 60-min baseline (normalized), score =
+`(z + z_velocity) × spread` with a ≥3-mention gate, near-duplicate merging, and a `TrendUpdate`
+(top 50 + all 15 category stats) every second to `trends.updates` and Redis `trends:latest`.
+On restart it rebuilds state from the last 65 minutes of `reddit.enriched`.

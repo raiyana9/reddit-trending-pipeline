@@ -71,6 +71,13 @@ def test_topics_drop_noise_numbers_and_short(nlp):
         assert bad not in topics
 
 
+def test_topics_drop_opinion_phrases(nlp):
+    topics = extract_topics(nlp("Unpopular opinion: the new tax plan is the worst decision ever. Best thing ever lol"))
+    for bad in ("bad decision", "worst decision", "good", "unpopular", "good thing", "best thing"):
+        assert bad not in topics
+    assert any("tax plan" in t for t in topics)
+
+
 def test_topics_deduped_and_capped(nlp):
     text = ". ".join(f"Topic number {w} is about {w} cats" for w in
                      ["red", "blue", "green", "yellow", "purple", "orange", "pink", "brown", "black"])

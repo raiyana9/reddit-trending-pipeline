@@ -19,6 +19,14 @@ NOISE: frozenset[str] = frozenset({
     "eli5", "psa", "til", "imo", "imho", "fyi", "deleted", "removed", "bit", "kind", "sort",
     "long time lurker", "what", "who", "this", "that", "one", "the news",
 })
+# Noun-chunk heads that carry opinion/structure, not subject matter ("worst decision", "a mess").
+GENERIC_HEADS: frozenset[str] = frozenset({
+    "decision", "disaster", "idea", "thing", "stuff", "problem", "issue", "point", "reason", "part",
+    "place", "deal", "mess", "fact", "case", "example", "story", "result", "look", "job", "work",
+    "news", "opinion", "question", "answer", "summary", "detail", "minute", "hour", "life",
+    "word", "start", "end", "kind", "type", "number", "amount", "level", "side", "rest", "share",
+})
+CONTENT_POS = {"NOUN", "PROPN"}
 EDGE_POS = {"DET", "PRON", "PUNCT", "CCONJ", "ADP", "PART", "SCONJ", "AUX", "SYM", "INTJ"}
 _NUMERIC = re.compile(r"^[\d\s.,:%$#+\-/]+$")
 MAX_PHRASE_TOKENS = 5
@@ -55,11 +63,21 @@ def _render(span: Span, lemmatize: bool) -> str:
     return re.sub(r"\s+", " ", text).strip(" -–—'\".,:;!?")
 
 
-def normalize_phrase(span: Span, lemmatize: bool = True) -> str | None:
-    """Trim junk at the edges, lemmatize + lowercase, and apply quality filters."""
+def normalize_phrase(span: Span, lemmatize: bool = True, is_entity: bool = False) -> str | None:
+    """Trim junk at the edges, lemmatize + lowercase, and apply quality filters.
+
+    Noun chunks must contain a real noun and must not be headed by a generic/opinion noun unless
+    they include a proper noun ("worst decision" is dropped, "Fed decision" is kept).
+    """
     trimmed = _trim(span)
     if trimmed is None or len(trimmed) > MAX_PHRASE_TOKENS:
         return None
+    if not is_entity:
+        if not any(t.pos_ in CONTENT_POS for t in trimmed):
+            return None
+        has_propn = any(t.pos_ == "PROPN" for t in trimmed)
+        if trimmed.root.lemma_.lower() in GENERIC_HEADS and not has_propn:
+            return None
     if _REDDIT_REF.search(span.text) or any(t.like_url or t.like_email for t in trimmed):
         return None
     text = _render(trimmed, lemmatize)
@@ -95,7 +113,7 @@ def extract_topics(doc: Doc, max_topics: int = MAX_TOPICS) -> list[str]:
     candidates: list[tuple[int, int, int, str]] = []  # (kind_rank, -n_tokens, position, text)
     for ent in doc.ents:
         if ent.label_ in ALLOWED_ENTITY_LABELS:
-            text = normalize_phrase(ent, lemmatize=False)
+            text = normalize_phrase(ent, lemmatize=False, is_entity=True)
             if text:
                 candidates.append((0, -len(text.split()), ent.start, text))
     for chunk in doc.noun_chunks:

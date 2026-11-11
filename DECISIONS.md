@@ -51,3 +51,33 @@ Running log of choices that deviate from, or fill gaps in, the original spec.
   `Lifestyle` (general-interest catch-all) with ~1/15 confidence.
 - **Measured (laptop, 1 worker, 50 posts/s):** 500/500 enriched; ingest latency p50 99 ms, p95 162 ms.
   p50 ≈ the 100 ms flush window, as expected at this rate.
+
+## Phase 3
+- **Score adds a velocity term.** `score = (z + z_velocity) * spread`, where
+  `z = (count_window − expected)/sqrt(expected+1)` as specified and
+  `z_velocity = max(velocity, 0)/sqrt(expected_30s + 1)`. Without it, a brand-new spike must
+  out-count topics that have been accumulating in the 5-minute window for minutes, which makes
+  the ≤5 s freshness target unreachable; with it, acceleration is rewarded immediately while
+  steady topics are unaffected. Spread boost = +5% per extra distinct subreddit (capped at 6).
+- **Baseline normalization uses observed history.** `expected = baseline_count / observed_s * window_s`
+  where `observed_s = min(baseline_s, now − window_s − first_post)`; with < 60 s of baseline history,
+  `expected = 0` (the engine reports raw window counts during warm-up).
+- **Buckets keyed by `ingested_at`** (the pipeline's clock) rather than `created_utc`, so replays and
+  live data behave the same and latency/freshness are measured on one clock.
+- **State rebuild on restart:** the engine subscribes without a consumer group and seeks every
+  partition of `reddit.enriched` to `now − (window + baseline)` via `offsets_for_times`, so a restart
+  keeps its baseline. Single instance by design (`trends.updates` has 1 partition).
+- **Near-duplicate merging:** among the top 200 candidates, phrases merge if their crude stem keys are
+  equal (`laker`/`lakers`) or one is a contiguous word-subsequence of the other *and* they share a
+  category. The highest-scoring member names the group; group count = max member count (members
+  co-occur in the same posts, so summing would double-count).
+- **Emit policy:** every `TREND_EMIT_INTERVAL_S`, if new posts arrived or a bucket boundary passed
+  (scores age even without new input).
+- **10× spike acceptance:** a real-time 10× spike of an *average* topic is only ~7 extra mentions in
+  2 s, which is statistically indistinguishable from noise, so the test feeds 30 s of spike traffic and
+  asserts the topic is #1 at each of the next 2 emit cycles. It also measures detection while the
+  spike is in progress: 4 s in the unit test.
+- **Memory:** unit test simulates 3 h at 5 posts/s with 30% never-repeating topics; tracked topics and
+  buckets plateau once the 65-minute horizon fills.
+- **Topic quality (NLP follow-up):** noun chunks must contain a NOUN/PROPN and must not be headed by a
+  generic/opinion noun ("worst decision", "a disaster") unless they contain a proper noun.
