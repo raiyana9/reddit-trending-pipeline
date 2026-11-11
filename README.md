@@ -65,3 +65,22 @@ uv run python -m services.trend_engine
 `(z + z_velocity) × spread` with a ≥3-mention gate, near-duplicate merging, and a `TrendUpdate`
 (top 50 + all 15 category stats) every second to `trends.updates` and Redis `trends:latest`.
 On restart it rebuilds state from the last 65 minutes of `reddit.enriched`.
+
+## API (Phase 4)
+
+```bash
+uv run python -m services.api                       # http://localhost:8000/docs
+curl localhost:8000/api/trends?category=Gaming
+websocat ws://localhost:8000/ws/trends              # snapshot, then 1 update/s
+```
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Kafka + Redis reachability (503 if degraded) |
+| `GET /api/trends` | Current snapshot from Redis (`?category=` filter) |
+| `GET /api/categories` | The 15 categories with window volume + avg sentiment |
+| `GET /api/metrics` | Aggregated live pipeline metrics |
+| `WS /ws/trends` | Snapshot on connect, then every `TrendUpdate` (`?category=` filter) |
+| `WS /ws/posts` | Stream of newly enriched posts (ticker) |
+
+Frames: `{"type", "server_sent_at", "data"}`; `{"type": "ping"}` after 15 s of silence.

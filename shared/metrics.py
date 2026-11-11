@@ -32,13 +32,13 @@ def percentile(values: list[float], p: float) -> float:
 
 
 class Metrics:
-    def __init__(self, service: str, instance: str | None = None) -> None:
+    def __init__(self, service: str, instance: str | None = None, hist_size: int = HIST_SIZE) -> None:
         self.service = service
         self.instance = instance or f"{socket.gethostname()}-{os.getpid()}"
         self.started_at = time.time()
         self.counters: dict[str, float] = defaultdict(float)
         self.gauges: dict[str, float] = {}
-        self.hists: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=HIST_SIZE))
+        self.hists: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=hist_size))
         self._prev_counters: dict[str, float] = {}
         self._prev_t = time.time()
 

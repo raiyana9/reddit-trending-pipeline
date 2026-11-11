@@ -81,3 +81,20 @@ Running log of choices that deviate from, or fill gaps in, the original spec.
   buckets plateau once the 65-minute horizon fills.
 - **Topic quality (NLP follow-up):** noun chunks must contain a NOUN/PROPN and must not be headed by a
   generic/opinion noun ("worst decision", "a disaster") unless they contain a proper noun.
+
+## Phase 4
+- **Frame envelope:** every WebSocket frame is `{"type": "snapshot"|"update"|"post"|"ping",
+  "server_sent_at": <epoch s>, "data": {...}}`. A snapshot frame is always sent on connect (an empty
+  structure if no trends exist yet) so clients have one code path.
+- **Added `WS /ws/posts`** (optional in spec) for the dashboard's live ticker. It carries a trimmed post
+  (no author hash, no snippet) and only deserializes enriched posts while at least one client is
+  subscribed.
+- **Slow clients:** bounded per-client queues (16 for trends, 64 for posts); on overflow the oldest
+  frame is dropped, never blocking the Kafka consumer or other clients.
+- **API Kafka consumers are group-less** (`group_id=None`, `latest`): every API replica must see every
+  update, so a shared consumer group would be wrong.
+- **`/api/metrics`** returns raw per-instance snapshots plus a `summary` (rates, totals, max-of-instances
+  latency percentiles, lag, freshness, projected/day). The API's own `e2e_s` histogram is capped at
+  300 samples so it reflects the last ~5 minutes rather than the engine's warm-up history.
+- **Measured (local, replay at 60×):** newest contributing post → WebSocket send: median 0.18 s,
+  max 0.36 s.
