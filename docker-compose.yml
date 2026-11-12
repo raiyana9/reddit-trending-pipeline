@@ -130,6 +130,28 @@ services:
     command: ["python", "-m", "services.producer", "reddit"]
     profiles: ["live"]
 
+  # Benchmark runner: inside the compose network so all timestamps share the VM clock.
+  bench:
+    <<: *python-service
+    build:
+      context: .
+      dockerfile: services/producer/Dockerfile
+    command: ["python", "scripts/benchmark.py"]
+    environment:
+      KAFKA_BOOTSTRAP: kafka:29092
+      REDIS_URL: redis://redis:6379/0
+      BENCH_API_URL: http://api:8000
+      BENCH_OUT: /tmp/BENCHMARKS.md
+      BENCH_HOST_CPU: ${BENCH_HOST_CPU:-}
+      BENCH_HOST_CORES: ${BENCH_HOST_CORES:-}
+      BENCH_HOST_MEMORY: ${BENCH_HOST_MEMORY:-}
+      BENCH_HOST_OS: ${BENCH_HOST_OS:-}
+      BENCH_HOST_DOCKER: ${BENCH_HOST_DOCKER:-}
+    # No bind mount (Docker Desktop may lack access to the project folder); `make bench` copies the
+    # report out with `docker compose cp`.
+    restart: "no"
+    profiles: ["bench"]
+
   # Optional Kafka UI on http://localhost:8080 — uncomment to use.
   # kafka-ui:
   #   image: provectuslabs/kafka-ui:latest

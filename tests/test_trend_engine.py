@@ -185,3 +185,16 @@ def test_top_50_and_samples_capped():
 def test_invalid_config(bad):
     with pytest.raises(ValueError):
         TrendEngine(CATS, *bad)
+
+
+def test_clock_skew_posts_from_the_future_are_visible():
+    """Producer clock 20 s ahead of the engine: posts must still count immediately."""
+    e = TrendEngine(CATS, min_count=1, started_at=0)
+    wall = 1000.0
+    for k in range(5):
+        e.add(post(["skewed"], wall + 20 + k * 0.1))
+    assert e.snapshot(now=wall).trends == []  # naive wall-clock window hides them
+    now = e.clock(wall)
+    assert now == pytest.approx(1020.4)
+    assert e.snapshot(now=now).trends[0].topic == "skewed"
+    assert e.clock(2000.0) == 2000.0  # never moves the clock backwards

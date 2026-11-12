@@ -163,6 +163,15 @@ class TrendEngine:
         self.posts_seen += 1
         self.dirty = True
 
+    def clock(self, wall: float) -> float:
+        """Engine time = max(wall clock, newest event seen).
+
+        Producers may stamp ``ingested_at`` with a clock that runs ahead of this process (e.g. a host
+        producer vs. a Docker Desktop VM that drifted). Without this, those posts would sit in
+        "future" buckets and be invisible until the local clock caught up.
+        """
+        return max(wall, self.max_ingested_at or wall)
+
     # ------------------------------------------------------------------ housekeeping
     def prune(self, now: float) -> int:
         """Drop buckets older than window + baseline. Returns number of topics removed."""

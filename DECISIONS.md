@@ -117,3 +117,21 @@ Running log of choices that deviate from, or fill gaps in, the original spec.
   also delete their own field on shutdown.
 - **Topic display:** proper nouns keep their surface form ("united nations", not "united nation").
 - Recharts is split into its own chunk (~155 kB gzip); `chunkSizeWarningLimit` raised to 600 kB.
+
+## Phase 6
+- **Images install from `requirements.txt` with pip** (exported from `uv.lock` via `make requirements`),
+  so building doesn't depend on the host's uv/lockfile version. `en_core_web_sm` is a pinned wheel in
+  that file, so the model is baked in at build time; the NLP worker's Dockerfile downloads any other
+  `SPACY_MODEL` at build time too. Containers run as a non-root user.
+- **One Dockerfile per service** (spec), intentionally identical up to the `CMD` so Docker's layer cache
+  is shared across them. The one-shot `topics` container reuses the API image.
+- **`make demo` waits on HTTP health** (`scripts/wait_ready.py`, stdlib-only) instead of
+  `docker compose up --wait`, which treats the intentionally-exiting `topics` job as a failure on some
+  Compose versions. Verified from a fresh `git clone` → `cp .env.example .env` → `make demo`.
+- Scaling verified: `--scale nlp_worker=3` → 3 consumers, 2 partitions each, zero lag.
+
+## Phase 8
+- Done: GitHub Actions CI (ruff, mypy, unit tests, Kafka/Redis integration tests via Compose, frontend
+  lint/types/tests/build, Docker image builds), Mermaid architecture diagram and screenshots in the README.
+- **Not done: Postgres history.** It was optional, and the dashboard's in-browser history covers
+  the topic-detail charts. It would be a small consumer of `trends.updates` writing hourly snapshots.

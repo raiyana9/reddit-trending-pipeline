@@ -62,8 +62,11 @@ class BatchBuffer:
 
 
 class NlpWorker:
-    def __init__(self, settings: Settings, enricher: Enricher | None = None) -> None:
+    def __init__(self, settings: Settings, enricher: Enricher | None = None,
+                 group_id: str = GROUP_ID, offset_reset: str = "earliest") -> None:
         self.settings = settings
+        self.group_id = group_id
+        self.offset_reset = offset_reset
         self.enricher = enricher or Enricher.from_settings(settings)
         self.metrics = Metrics("nlp_worker")
         self.stop = asyncio.Event()
@@ -132,11 +135,14 @@ class NlpWorker:
 
     async def run(self) -> None:
         s = self.settings
-        install_shutdown_handler(self.stop)
+        try:
+            install_shutdown_handler(self.stop)
+        except RuntimeError:  # pragma: no cover - not in main thread (tests)
+            pass
         redis = aioredis.from_url(s.redis_url)
         self.producer = make_producer()
         self.consumer = make_consumer(
-            TOPIC_RAW, group_id=GROUP_ID, auto_offset_reset="earliest",
+            TOPIC_RAW, group_id=self.group_id, auto_offset_reset=self.offset_reset,
             max_poll_records=s.nlp_batch_size,
         )
         await self.producer.start()

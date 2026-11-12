@@ -21,7 +21,7 @@ from services.producer.synthetic import SyntheticGenerator  # noqa: E402
 from shared.config import ROOT, get_settings  # noqa: E402
 
 # (phrase, category, start offset s, duration s, count)
-DEMO_STORIES = [
+DEMO_STORIES: list[tuple[str, str, float, float, int]] = [
     ("GPT-6", "AI/ML", 600, 600, 45),
     ("the Switch 2", "Gaming", 1500, 500, 40),
     ("Bitcoin", "Finance/Crypto", 2300, 600, 45),

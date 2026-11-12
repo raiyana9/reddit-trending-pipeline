@@ -63,8 +63,19 @@ live:  ## Full stack with the live Reddit producer (requires Reddit creds in .en
 	@python3 scripts/wait_ready.py http://localhost:8000/health 300
 	@echo "  Dashboard:  http://localhost:3000"
 
-bench:  ## Run throughput / latency / freshness benchmarks -> BENCHMARKS.md
-	$(PY) scripts/benchmark.py
+bench:  ## Run throughput / latency / freshness benchmarks -> BENCHMARKS.md (~12 min)
+	@test -f .env || cp .env.example .env
+	$(COMPOSE) --profile app up -d --build
+	-$(COMPOSE) --profile app --profile demo stop replay_producer
+	@python3 scripts/wait_ready.py http://localhost:8000/health 300
+	BENCH_HOST_CPU="$$(sysctl -n machdep.cpu.brand_string 2>/dev/null || uname -p)" \
+	BENCH_HOST_CORES="$$(sysctl -n hw.ncpu 2>/dev/null || nproc)" \
+	BENCH_HOST_OS="$$(uname -sm)" \
+	BENCH_HOST_DOCKER="$$(docker info --format '{{.NCPU}} CPUs')" \
+	$(COMPOSE) --profile app --profile bench up --build --no-deps --exit-code-from bench bench; \
+	status=$$?; \
+	$(COMPOSE) --profile bench cp bench:/tmp/BENCHMARKS.md BENCHMARKS.md && echo "wrote BENCHMARKS.md"; \
+	exit $$status
 
 logs:  ## Tail service logs
 	$(COMPOSE) --profile app --profile demo --profile live logs -f --tail=50

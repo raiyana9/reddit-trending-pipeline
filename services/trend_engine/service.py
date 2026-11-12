@@ -77,10 +77,11 @@ async def run(settings: Settings | None = None) -> None:
                     except Exception as exc:  # noqa: BLE001
                         metrics.inc("bad_messages")
                         log.warning("bad enriched message", extra={"error": repr(exc)})
-            now = time.time()
-            if now < next_emit:
+            wall = time.time()
+            if wall < next_emit:
                 continue
-            next_emit = now + s.trend_emit_interval_s
+            next_emit = wall + s.trend_emit_interval_s
+            now = engine.clock(wall)
             if not engine.should_emit(now, last_emit) and last_emit is not None:
                 continue
             t0 = time.perf_counter()

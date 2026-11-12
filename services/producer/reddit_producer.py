@@ -46,7 +46,7 @@ def submission_to_raw(sub: Any) -> RawPost:
         subreddit=str(sub.subreddit.display_name),
         title=sub.title or "",
         selftext=getattr(sub, "selftext", "") or "",
-        author=str(author) if author is not None else None,
+        author=str(author) if author is not None else "[deleted]",  # hashed by the model
         score=int(getattr(sub, "score", 0) or 0),
         num_comments=int(getattr(sub, "num_comments", 0) or 0),
         url=f"https://www.reddit.com{sub.permalink}",
