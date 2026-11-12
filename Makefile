@@ -74,7 +74,7 @@ bench:  ## Run throughput / latency / freshness benchmarks -> BENCHMARKS.md (~12
 	BENCH_HOST_DOCKER="$$(docker info --format '{{.NCPU}} CPUs')" \
 	$(COMPOSE) --profile app --profile bench up --build --no-deps --exit-code-from bench bench; \
 	status=$$?; \
-	$(COMPOSE) --profile bench cp bench:/tmp/BENCHMARKS.md BENCHMARKS.md && echo "wrote BENCHMARKS.md"; \
+	$(COMPOSE) --profile app --profile bench cp bench:/tmp/BENCHMARKS.md BENCHMARKS.md && echo "wrote BENCHMARKS.md"; \
 	exit $$status
 
 logs:  ## Tail service logs

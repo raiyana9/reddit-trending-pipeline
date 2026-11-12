@@ -88,7 +88,9 @@ def api_json(path: str) -> dict:
 
 
 async def produce_at(sender: PostSender, gen: SyntheticGenerator, rate: float, seconds: float,
-                     stop: asyncio.Event | None = None) -> int:
+                     stop: asyncio.Event | None = None, ids: set[str] | None = None,
+                     id_prefix: str = "") -> int:
+    """Send synthetic posts at ``rate``/s. If ``ids`` is given, posts get unique ids recorded there."""
     t0 = time.monotonic()
     sent = 0
     while True:
@@ -96,7 +98,11 @@ async def produce_at(sender: PostSender, gen: SyntheticGenerator, rate: float, s
         if elapsed >= seconds or (stop and stop.is_set()):
             break
         while sent < rate * elapsed:
-            await sender.send(gen.make_post())
+            post = gen.make_post()
+            if ids is not None:
+                post.id = f"{id_prefix}{sent}"
+                ids.add(post.id)
+            await sender.send(post)
             sent += 1
         await asyncio.sleep(0.004)
     await sender.producer.flush()
@@ -121,12 +127,15 @@ async def throughput(sender, gen, col, rates, seconds, drain_s) -> list[dict]:
         t_start = time.time()
         stop = asyncio.Event()
         lag_task = asyncio.create_task(sample_lag(stop))
-        sent = await produce_at(sender, gen, rate, seconds)
+        sent_ids: set[str] = set()
+        sent = await produce_at(sender, gen, rate, seconds, ids=sent_ids,
+                                id_prefix=f"bench{int(t_start)}r{rate}n")
         t_end = time.time()
         await asyncio.sleep(drain_s)
         stop.set()
         await lag_task
-        recs = col.between(t_start, t_end)
+        # Match by id, so only this phase's posts count (exact loss, no window guessing).
+        recs = [col.records[i] for i in sent_ids if i in col.records]
         lat = [p - i for i, p in recs]
         # sustained rate = enriched records whose processing finished inside the load window
         done_in_window = [p for i, p in recs if p <= t_end]
@@ -134,7 +143,7 @@ async def throughput(sender, gen, col, rates, seconds, drain_s) -> list[dict]:
             "rate": rate,
             "sent": sent,
             "enriched": len(recs),
-            "loss": sent - len(recs),
+            "loss": len(sent_ids) - len(recs),
             "sustained_per_s": len(done_in_window) / (t_end - t_start),
             "p50": percentile(lat, 50), "p95": percentile(lat, 95), "p99": percentile(lat, 99),
             "max_lag": max(lags) if lags else 0,
