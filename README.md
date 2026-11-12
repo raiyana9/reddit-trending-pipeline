@@ -6,7 +6,17 @@ over sliding windows, and pushes live updates to a **React** dashboard over **Fa
 
 ![Dashboard (dark mode)](docs/dashboard-dark.png)
 
-<!-- BENCH-SUMMARY -->
+## Measured results
+
+From `make bench` on an Apple M4 Pro laptop, 1 NLP worker, everything in Docker. Full report in
+[BENCHMARKS.md](BENCHMARKS.md).
+
+| Metric | Target | Measured |
+|---|---|---|
+| Ingestion volume | ≥ 10,000 posts/day | **200 posts/s sustained** (~17 M/day), 0 messages lost |
+| Ingestion latency (produce → enriched, p95) | sub-second | **154 ms** at 50/s · **207 ms** at 200/s |
+| Dashboard freshness (new trend → visible over WebSocket) | ≤ 5 s | **median 0.95 s, max 0.96 s** (10/10 trials) |
+| Categories | exactly 15 | 15 ([config/categories.yaml](config/categories.yaml)) |
 
 ## Architecture
 

@@ -135,3 +135,20 @@ Running log of choices that deviate from, or fill gaps in, the original spec.
   lint/types/tests/build, Docker image builds), Mermaid architecture diagram and screenshots in the README.
 - **Not done: Postgres history.** It was optional, and the dashboard's in-browser history covers
   the topic-detail charts. It would be a small consumer of `trends.updates` writing hourly snapshots.
+
+## Phase 7
+- **Metrics transport:** JSON snapshots in Redis (`metrics:<service>` hash, one field per instance,
+  every 5 s), aggregated by `GET /api/metrics`. Histograms are a 60 s rolling window.
+- **Clock skew bug (found by the benchmark):** the first run had a 0.95 s median but outliers of 9–17 s.
+  Frame-level tracing showed the Docker Desktop VM clock drifting 20–190 s from the host. The trend
+  engine bucketed host-stamped `ingested_at` values but defined "now" by its own clock, so posts from
+  a clock running ahead sat in "future" buckets, invisible until the local clock caught up. Fix: engine
+  time = `max(wall clock, newest ingested_at seen)` (unit-tested).
+- **Benchmark runs inside the Compose network** (`bench` service) so load generation, the pipeline and
+  the WebSocket client share one clock; cross-clock latencies aren't trustworthy on Docker Desktop.
+  The report is copied out with `docker compose cp` (Docker Desktop may lack macOS permission to
+  bind-mount folders under `~/Desktop`).
+- **Loss is computed by exact id**: each load phase stamps unique ids and counts how many come back
+  enriched (an earlier time-window count over-counted).
+- **Results (1 worker):** 200 posts/s sustained with zero loss, p95 207 ms at 200/s, freshness
+  median 0.95 s / max 0.96 s. No tuning beyond the defaults was needed.
